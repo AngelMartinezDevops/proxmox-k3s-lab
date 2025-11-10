@@ -84,12 +84,16 @@ Proxmox Host (192.168.10.0/24)
 ### Software necesario en tu máquina:
 
 - **Terraform** >= 1.0
-- **Ansible** >= 2.9
+- **Ansible** >= 2.9 (requiere Linux o WSL en Windows)
 - **kubectl** (para interactuar con el cluster)
 - **SSH key** generada (`~/.ssh/id_ed25519`)
 
+### Instrucciones de Instalación
+
+#### En Linux/Mac:
+
 ```bash
-# Instalar Terraform (Linux/Mac)
+# Instalar Terraform
 curl -fsSL https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip -o terraform.zip
 unzip terraform.zip && sudo mv terraform /usr/local/bin/
 
@@ -102,6 +106,91 @@ chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 # Generar SSH key si no tienes
 ssh-keygen -t ed25519 -C "k3s-lab" -f ~/.ssh/id_ed25519
+```
+
+#### En Windows:
+
+**1. Instalar Terraform:**
+
+```powershell
+# Método 1: Instalación manual (Recomendado)
+# 1. Descargar Terraform desde https://www.terraform.io/downloads
+# 2. Extraer el archivo .zip
+# 3. Crear directorio:
+New-Item -Path "C:\terraform" -ItemType Directory
+
+# 4. Mover terraform.exe a C:\terraform
+# 5. Añadir al PATH del sistema:
+#    - Abrir Propiedades del Sistema (Win + Pause/Break)
+#    - Clic en "Configuración avanzada del sistema"
+#    - Clic en "Variables de entorno"
+#    - En "Variables del sistema", buscar "Path" y hacer clic en "Editar"
+#    - Clic en "Nuevo" y añadir: C:\terraform
+#    - Clic en "Aceptar" en todas las ventanas
+# 6. Reiniciar PowerShell y verificar:
+terraform version
+
+# Método 2: Usando Chocolatey (si está instalado):
+choco install terraform
+
+# Método 3: Usando Scoop (si está instalado):
+scoop install terraform
+```
+
+**2. Instalar WSL2 (necesario para Ansible):**
+
+```powershell
+# Abrir PowerShell como Administrador
+wsl --install
+
+# Reiniciar el ordenador
+# Después del reinicio, abrir WSL (Ubuntu) desde el Menú Inicio
+
+# Dentro de WSL, instalar Ansible:
+sudo apt update
+sudo apt install ansible python3-pip -y
+```
+
+**3. Instalar kubectl:**
+
+```powershell
+# Descargar kubectl desde https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/
+# O usando Chocolatey:
+choco install kubernetes-cli
+
+# O usando Scoop:
+scoop install kubectl
+
+# Verificar instalación:
+kubectl version --client
+```
+
+**4. Generar SSH Key:**
+
+```powershell
+# Abrir PowerShell
+ssh-keygen -t ed25519 -C "k3s-lab"
+
+# Presionar Enter para aceptar la ubicación por defecto (C:\Users\TuUsuario\.ssh\id_ed25519)
+# Introducir passphrase (opcional)
+
+# Ver tu clave pública:
+Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub
+
+# Copiar esta clave para usar en terraform.tfvars
+```
+
+**5. Configurar SSH para WSL:**
+
+```bash
+# Dentro de WSL, crear directorio .ssh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Copiar clave SSH de Windows a WSL
+cp /mnt/c/Users/TU_USUARIO_WINDOWS/.ssh/id_ed25519* ~/.ssh/
+chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
 ```
 
 ### En Proxmox:

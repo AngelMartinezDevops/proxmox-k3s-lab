@@ -111,15 +111,28 @@ ssh-keygen -t ed25519 -C "k3s-lab" -f ~/.ssh/id_ed25519
 **1. Install Terraform:**
 
 ```powershell
-# Download Terraform from https://www.terraform.io/downloads
-# Or using Chocolatey:
+# Method 1: Manual installation (Recommended)
+# 1. Download Terraform from https://www.terraform.io/downloads
+# 2. Extract the .zip file
+# 3. Create directory:
+New-Item -Path "C:\terraform" -ItemType Directory
+
+# 4. Move terraform.exe to C:\terraform
+# 5. Add to System PATH:
+#    - Open System Properties (Win + Pause/Break)
+#    - Click "Advanced system settings"
+#    - Click "Environment Variables"
+#    - Under "System variables", find "Path" and click "Edit"
+#    - Click "New" and add: C:\terraform
+#    - Click "OK" on all windows
+# 6. Restart PowerShell and verify:
+terraform version
+
+# Method 2: Using Chocolatey (if installed):
 choco install terraform
 
-# Or using Scoop:
+# Method 3: Using Scoop (if installed):
 scoop install terraform
-
-# Verify installation:
-terraform version
 ```
 
 **2. Install WSL2 (required for Ansible):**
