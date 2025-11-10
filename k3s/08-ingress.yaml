@@ -1,0 +1,157 @@
+# ============================================================================
+# Ingress - Routing HTTP/HTTPS hacia servicios internos
+# ============================================================================
+# Usa Traefik (incluido por defecto en K3s) como Ingress Controller
+# Permite acceder a los servicios usando dominios en lugar de NodePorts
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Aplicación 1
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-one
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-one
+  template:
+    metadata:
+      labels:
+        app: app-one
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - echo "<h1>App One</h1><p>This is application ONE</p>" > /usr/share/nginx/html/index.html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-one
+spec:
+  selector:
+    app: app-one
+  ports:
+  - port: 80
+    targetPort: 80
+---
+# ----------------------------------------------------------------------------
+# Aplicación 2
+# ----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-two
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: app-two
+  template:
+    metadata:
+      labels:
+        app: app-two
+    spec:
+      containers:
+      - name: app
+        image: nginx:alpine
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - echo "<h1>App Two</h1><p>This is application TWO</p>" > /usr/share/nginx/html/index.html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-two
+spec:
+  selector:
+    app: app-two
+  ports:
+  - port: 80
+    targetPort: 80
+---
+# ============================================================================
+# Ingress - Configuración de routing
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apps-ingress
+  annotations:
+    # Usar Traefik con el entrypoint 'web' (puerto 80)
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  # ------------------------------------
+  # Regla 1: app1.lab.local → app-one
+  # ------------------------------------
+  - host: app1.lab.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app-one
+            port:
+              number: 80
+  
+  # ------------------------------------
+  # Regla 2: app2.lab.local → app-two
+  # ------------------------------------
+  - host: app2.lab.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app-two
+            port:
+              number: 80
+
+# ============================================================================
+# CONFIGURACIÓN DNS NECESARIA:
+# 
+# Opción 1: Archivo /etc/hosts (local, para pruebas)
+# ---------------------------------------------------
+# Añadir en tu máquina local (/etc/hosts o C:\Windows\System32\drivers\etc\hosts):
+# 
+#   192.168.10.100 app1.lab.local
+#   192.168.10.100 app2.lab.local
+#
+# (Usa la IP de tu nodo master o cualquier nodo del cluster)
+#
+# Opción 2: Servidor DNS local (recomendado para múltiples usuarios)
+# -------------------------------------------------------------------
+# Configurar en tu router o servidor DNS (Pi-hole, AdGuard, etc.):
+# 
+#   *.lab.local → 192.168.10.100
+#
+# Esto permite que todos los subdominios .lab.local apunten al cluster
+#
+# VERIFICACIÓN:
+# -------------
+# 1. Aplicar este manifest: kubectl apply -f 08-ingress.yaml
+# 2. Esperar que los pods estén Ready: kubectl get pods
+# 3. Configurar DNS según una de las opciones anteriores
+# 4. Probar acceso:
+#    curl http://app1.lab.local
+#    curl http://app2.lab.local
+# 5. O abrir en navegador:
+#    http://app1.lab.local
+#    http://app2.lab.local
+# ============================================================================

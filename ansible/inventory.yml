@@ -1,0 +1,53 @@
+# ============================================================================
+# Ansible Inventory - K3s Cluster
+# ============================================================================
+# Define los hosts del cluster K3s y sus credenciales de acceso
+# Estructura: 1 master (control plane) + 2 workers
+# ============================================================================
+
+all:
+  children:
+    k3s_cluster:
+      children:
+        # ====================================================================
+        # Master Node - Control Plane
+        # ====================================================================
+        k3s_master:
+          hosts:
+            master:
+              # IP del master K3s (definida en terraform/k3s-master.tf)
+              ansible_host: 192.168.10.100
+              
+              # Usuario para conectar por SSH (cloud-init crea este usuario)
+              ansible_user: ubuntu
+              
+              # Ruta a tu clave privada SSH
+              # Debe corresponder con la pública en terraform.tfvars
+              # Cambiar si tu clave está en otra ubicación
+              ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+        
+        # ====================================================================
+        # Worker Nodes - Nodos de carga
+        # ====================================================================
+        k3s_workers:
+          hosts:
+            worker-1:
+              # IP del worker 1 (definida en terraform/k3s-worker-1.tf)
+              ansible_host: 192.168.10.101
+              
+              ansible_user: ubuntu
+              ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+            
+            worker-2:
+              # IP del worker 2 (definida en terraform/k3s-worker-2.tf)
+              ansible_host: 192.168.10.102
+              
+              ansible_user: ubuntu
+              ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+
+# ============================================================================
+# NOTAS:
+# - Las IPs deben coincidir con las definidas en los archivos .tf de Terraform
+# - La clave SSH debe existir y tener permisos 600
+# - Para añadir más workers, duplica la estructura y cambia el nombre/IP
+# ============================================================================

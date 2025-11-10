@@ -1,0 +1,209 @@
+---
+# ============================================================================
+# Ansible Playbook - Instalación de K3s Cluster
+# ============================================================================
+# Este playbook instala K3s en un cluster de 3 nodos:
+# 1. Instala K3s server en el master
+# 2. Obtiene el token del cluster
+# 3. Instala K3s agent en los workers y los une al cluster
+# 4. Verifica que todos los nodos estén operativos
+# ============================================================================
+
+# ==============================================================================
+# PARTE 1: Instalar K3s en el master
+# ==============================================================================
+- name: Instalar K3s Master
+  hosts: k3s_master
+  become: yes  # Ejecutar comandos como root
+  tasks:
+    # --------------------------------------------------------------------------
+    # Actualizar sistema
+    # --------------------------------------------------------------------------
+    - name: Actualizar cache de apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600  # Cache válido por 1 hora
+    
+    # --------------------------------------------------------------------------
+    # Instalar dependencias básicas
+    # --------------------------------------------------------------------------
+    - name: Instalar dependencias
+      apt:
+        name:
+          - curl
+          - apt-transport-https
+        state: present
+    
+    # --------------------------------------------------------------------------
+    # Verificar si K3s ya está instalado (para idempotencia)
+    # --------------------------------------------------------------------------
+    - name: Verificar si K3s ya está instalado
+      stat:
+        path: /usr/local/bin/k3s
+      register: k3s_installed
+    
+    # --------------------------------------------------------------------------
+    # Instalar K3s en modo servidor (control plane)
+    # --------------------------------------------------------------------------
+    - name: Instalar K3s en modo servidor
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s - server \
+          --write-kubeconfig-mode 644 \
+          --node-taint CriticalAddonsOnly=true:NoExecute
+      when: not k3s_installed.stat.exists
+      # Explicación de flags:
+      # --write-kubeconfig-mode 644: Permite leer kubeconfig sin sudo
+      # --node-taint: Evita que el master ejecute workloads de usuario
+    
+    # --------------------------------------------------------------------------
+    # Esperar a que K3s esté listo
+    # --------------------------------------------------------------------------
+    - name: Esperar a que K3s esté listo
+      wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+        timeout: 120  # Timeout de 2 minutos
+    
+    # --------------------------------------------------------------------------
+    # Obtener el token del cluster (necesario para unir workers)
+    # --------------------------------------------------------------------------
+    - name: Obtener el token del cluster
+      slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token
+      # El token se guarda en la variable k3s_token (codificado en base64)
+    
+    # --------------------------------------------------------------------------
+    # Decodificar token y guardarlo como variable
+    # --------------------------------------------------------------------------
+    - name: Guardar token como variable
+      set_fact:
+        k3s_token_value: "{{ k3s_token.content | b64decode | trim }}"
+      # Esta variable se usará en los workers para unirse al cluster
+    
+    # --------------------------------------------------------------------------
+    # Mostrar mensaje de éxito
+    # --------------------------------------------------------------------------
+    - name: Mostrar información del master
+      debug:
+        msg: "K3s master instalado correctamente en {{ ansible_host }}"
+
+# ==============================================================================
+# PARTE 2: Instalar K3s en los workers
+# ==============================================================================
+- name: Instalar K3s Workers
+  hosts: k3s_workers
+  become: yes
+  vars:
+    # IP del master K3s - DEBE COINCIDIR con la IP en k3s-master.tf
+    k3s_master_ip: "192.168.10.100"
+  tasks:
+    # --------------------------------------------------------------------------
+    # Actualizar sistema
+    # --------------------------------------------------------------------------
+    - name: Actualizar cache de apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+    
+    # --------------------------------------------------------------------------
+    # Instalar dependencias
+    # --------------------------------------------------------------------------
+    - name: Instalar dependencias
+      apt:
+        name:
+          - curl
+          - apt-transport-https
+        state: present
+    
+    # --------------------------------------------------------------------------
+    # Obtener token del master (desde la variable guardada anteriormente)
+    # --------------------------------------------------------------------------
+    - name: Obtener token del master
+      set_fact:
+        k3s_token: "{{ hostvars['master']['k3s_token_value'] }}"
+      # Accede a la variable k3s_token_value del host 'master'
+    
+    # --------------------------------------------------------------------------
+    # Verificar si K3s ya está instalado
+    # --------------------------------------------------------------------------
+    - name: Verificar si K3s ya está instalado
+      stat:
+        path: /usr/local/bin/k3s
+      register: k3s_installed
+    
+    # --------------------------------------------------------------------------
+    # Instalar K3s en modo agent (worker) y unirse al cluster
+    # --------------------------------------------------------------------------
+    - name: Instalar K3s en modo agent (worker)
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_URL=https://{{ k3s_master_ip }}:6443 \
+          K3S_TOKEN={{ k3s_token }} sh -
+      when: not k3s_installed.stat.exists
+      # Explicación:
+      # K3S_URL: URL del API server del master (puerto 6443)
+      # K3S_TOKEN: Token de autenticación obtenido del master
+      # sh -: Instala K3s agent que se conecta al master
+    
+    # --------------------------------------------------------------------------
+    # Mostrar mensaje de éxito
+    # --------------------------------------------------------------------------
+    - name: Mostrar información del worker
+      debug:
+        msg: "K3s worker instalado correctamente en {{ ansible_host }}"
+
+# ==============================================================================
+# PARTE 3: Verificación final del cluster
+# ==============================================================================
+- name: Verificar el cluster
+  hosts: k3s_master
+  become: yes
+  tasks:
+    # --------------------------------------------------------------------------
+    # Esperar a que los workers se registren en el cluster
+    # --------------------------------------------------------------------------
+    - name: Esperar a que los nodos se registren
+      pause:
+        seconds: 30  # Esperar 30 segundos para que los workers se conecten
+    
+    # --------------------------------------------------------------------------
+    # Listar todos los nodos del cluster
+    # --------------------------------------------------------------------------
+    - name: Listar todos los nodos del cluster
+      command: kubectl get nodes
+      register: cluster_nodes
+      # Ejecuta: kubectl get nodes
+      # Output esperado:
+      # NAME              STATUS   ROLES                  AGE   VERSION
+      # vm-k3s-master     Ready    control-plane,master   5m    v1.28.4+k3s1
+      # vm-k3s-worker-1   Ready    <none>                 3m    v1.28.4+k3s1
+      # vm-k3s-worker-2   Ready    <none>                 3m    v1.28.4+k3s1
+    
+    # --------------------------------------------------------------------------
+    # Mostrar estado del cluster
+    # --------------------------------------------------------------------------
+    - name: Mostrar estado del cluster
+      debug:
+        msg: "{{ cluster_nodes.stdout_lines }}"
+
+# ==============================================================================
+# NOTAS:
+# 
+# 1. Este playbook es idempotente: puede ejecutarse múltiples veces
+# 2. Si un nodo ya tiene K3s instalado, se saltará la instalación
+# 3. El master tiene un taint que evita ejecutar workloads de usuario
+# 4. Los workers se unen automáticamente al master usando el token
+# 5. Para desinstalar K3s:
+#    - Master: /usr/local/bin/k3s-uninstall.sh
+#    - Workers: /usr/local/bin/k3s-agent-uninstall.sh
+# 
+# TROUBLESHOOTING:
+# ----------------
+# - Si falla la conexión al master desde workers:
+#   1. Verificar que la IP del master es correcta (k3s_master_ip)
+#   2. Verificar que el puerto 6443 está abierto
+#   3. Verificar conectividad: curl -k https://192.168.10.100:6443
+# 
+# - Si los nodos no aparecen como Ready:
+#   1. Ver logs del master: sudo journalctl -u k3s -f
+#   2. Ver logs del worker: sudo journalctl -u k3s-agent -f
+# ==============================================================================
