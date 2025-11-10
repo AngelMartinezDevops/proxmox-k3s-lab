@@ -239,6 +239,61 @@ kubectl cluster-info
 
 ---
 
+## 🖥️ Instalar Lens (Opcional - Recomendado)
+
+[Lens](https://k8slens.dev/) es un potente IDE para Kubernetes que proporciona una interfaz gráfica para gestionar tu cluster.
+
+### Instalar Lens
+
+**En Windows/Mac/Linux:**
+
+1. Descargar Lens desde: https://k8slens.dev/
+2. Instalar la aplicación
+3. Ejecutar Lens
+
+### Añadir tu cluster K3s a Lens
+
+**Opción 1: Detección automática**
+
+1. Abrir Lens
+2. Hacer clic en **"+"** (Añadir Cluster) en la esquina superior izquierda
+3. Lens detectará automáticamente los clusters desde `~/.kube/config`
+4. Seleccionar tu cluster K3s y hacer clic en **"Añadir Cluster"**
+
+**Opción 2: Configuración manual**
+
+1. Abrir Lens
+2. Hacer clic en **"+" → "Añadir desde kubeconfig"**
+3. Pegar el contenido de tu kubeconfig:
+
+```bash
+# Linux/Mac
+cat ~/.kube/config
+
+# Windows PowerShell
+Get-Content $env:USERPROFILE\.kube\config
+```
+
+4. Hacer clic en **"Añadir Cluster"**
+
+### Usar Lens
+
+Una vez conectado, puedes:
+- **Ver todos los recursos** en una interfaz gráfica
+- **Acceder a logs de pods** con resaltado de sintaxis
+- **Ejecutar comandos** en pods con terminal integrado
+- **Monitorizar recursos** (CPU, Memoria) en tiempo real
+- **Editar recursos** con un editor YAML integrado
+- **Port-forward** servicios con un clic
+- **Instalar Helm charts** desde un catálogo
+
+**Extensiones recomendadas de Lens:**
+- Resource Metrics (ver uso de CPU/Memoria)
+- Pod Security
+- Helm
+
+---
+
 ## 🎮 Uso del Cluster
 
 ### Verificar estado del cluster

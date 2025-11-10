@@ -11,135 +11,209 @@
 
 **English** | [Español](README_ES.md)
 
-YouTube Channel: [@angelmartinezdevops](https://youtube.com/@angelmartinezdevops)
-
 </div>
 
 ---
 
-## 📋 Índice
+## 📋 Table of Contents
 
-1. [Descripción del Proyecto](#-descripción-del-proyecto)
-2. [Arquitectura](#-arquitectura)
-3. [Requisitos Previos](#-requisitos-previos)
-4. [Instalación](#-instalación)
-5. [Uso del Cluster](#-uso-del-cluster)
-6. [Gestión y Mantenimiento](#-gestión-y-mantenimiento)
+1. [Project Description](#-project-description)
+2. [Architecture](#-architecture)
+3. [Prerequisites](#-prerequisites)
+4. [Installation](#-installation)
+5. [Cluster Usage](#-cluster-usage)
+6. [Management and Maintenance](#-management-and-maintenance)
 7. [Troubleshooting](#-troubleshooting)
-8. [Referencias](#-referencias)
+8. [References](#-references)
 
 ---
 
-## 🎯 Descripción del Proyecto
+## 🎯 Project Description
 
-Este repositorio automatiza el despliegue completo de un cluster **K3s** (Kubernetes ligero) en **Proxmox** utilizando:
+This repository automates the complete deployment of a **K3s** cluster (lightweight Kubernetes) on **Proxmox** using:
 
-- **Terraform** para el aprovisionamiento de infraestructura (VMs)
-- **Ansible** para la configuración y despliegue de K3s
-- **Cloud-init** para la inicialización de las VMs
+- **Terraform** for infrastructure provisioning (VMs)
+- **Ansible** for K3s configuration and deployment
+- **Cloud-init** for VM initialization
 
-El resultado es un cluster de 3 nodos (1 master + 2 workers) completamente funcional y listo para desplegar aplicaciones.
+The result is a fully functional 3-node cluster (1 master + 2 workers) ready to deploy applications.
 
-**Hardware del Lab:**
+**Lab Hardware:**
 - Intel Core i7-6700T (4 cores / 8 threads @ 2.80GHz)
 - 8GB RAM
-- 240GB NVMe (Sistema Proxmox)
+- 240GB NVMe (Proxmox System)
 - Proxmox VE 7.x
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Architecture
 
 ```
 Proxmox Host (192.168.10.0/24)
 │
-└── Cluster K3s
+└── K3s Cluster
     ├── VM Master (192.168.10.100)
-    │   ├── 2 cores, 4GB RAM, 20GB disco
+    │   ├── 2 cores, 4GB RAM, 20GB disk
     │   ├── K3s Server (Control Plane)
     │   └── Taint: CriticalAddonsOnly=true:NoExecute
     │
     ├── VM Worker-1 (192.168.10.101)
-    │   ├── 1 core, 3GB RAM, 20GB disco
+    │   ├── 1 core, 3GB RAM, 20GB disk
     │   └── K3s Agent (Worker)
     │
     └── VM Worker-2 (192.168.10.102)
-        ├── 1 core, 3GB RAM, 20GB disco
+        ├── 1 core, 3GB RAM, 20GB disk
         └── K3s Agent (Worker)
 ```
 
-### Características del Cluster:
+### Cluster Features:
 
-- **Master**: Solo para control plane (con taint)
-- **Workers**: Ejecutan workloads
-- **CNI**: Flannel (incluido en K3s)
-- **Load Balancer**: ServiceLB (incluido en K3s)
-- **Ingress**: Traefik (incluido en K3s)
-- **Storage**: Local-path provisioner (incluido en K3s)
+- **Master**: Control plane only (with taint)
+- **Workers**: Run workloads
+- **CNI**: Flannel (included in K3s)
+- **Load Balancer**: ServiceLB (included in K3s)
+- **Ingress**: Traefik (included in K3s)
+- **Storage**: Local-path provisioner (included in K3s)
 
 ---
 
-## 📦 Requisitos Previos
+## 📦 Prerequisites
 
-### Software necesario en tu máquina:
+### Required Software on Your Machine:
 
 - **Terraform** >= 1.0
-- **Ansible** >= 2.9
-- **kubectl** (para interactuar con el cluster)
-- **SSH key** generada (`~/.ssh/id_ed25519`)
+- **Ansible** >= 2.9 (requires Linux or WSL on Windows)
+- **kubectl** (to interact with the cluster)
+- **SSH key** generated (`~/.ssh/id_ed25519`)
+
+### Installation Instructions
+
+#### On Linux/Mac:
 
 ```bash
-# Instalar Terraform (Linux/Mac)
+# Install Terraform
 curl -fsSL https://releases.hashicorp.com/terraform/1.6.0/terraform_1.6.0_linux_amd64.zip -o terraform.zip
 unzip terraform.zip && sudo mv terraform /usr/local/bin/
 
-# Instalar Ansible
+# Install Ansible
 pip install ansible
 
-# Instalar kubectl
+# Install kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
-# Generar SSH key si no tienes
+# Generate SSH key if you don't have one
 ssh-keygen -t ed25519 -C "k3s-lab" -f ~/.ssh/id_ed25519
 ```
 
-### En Proxmox:
+#### On Windows:
 
-- **Proxmox VE** 7.x o superior instalado y funcionando
-- **Template VM** con Ubuntu 24.04 + Cloud-init (ID 9000)
-- Acceso API con usuario **root@pam**
+**1. Install Terraform:**
+
+```powershell
+# Download Terraform from https://www.terraform.io/downloads
+# Or using Chocolatey:
+choco install terraform
+
+# Or using Scoop:
+scoop install terraform
+
+# Verify installation:
+terraform version
+```
+
+**2. Install WSL2 (required for Ansible):**
+
+```powershell
+# Open PowerShell as Administrator
+wsl --install
+
+# Restart your computer
+# After restart, open WSL (Ubuntu) from Start Menu
+
+# Inside WSL, install Ansible:
+sudo apt update
+sudo apt install ansible python3-pip -y
+```
+
+**3. Install kubectl:**
+
+```powershell
+# Download kubectl from https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/
+# Or using Chocolatey:
+choco install kubernetes-cli
+
+# Or using Scoop:
+scoop install kubectl
+
+# Verify installation:
+kubectl version --client
+```
+
+**4. Generate SSH Key:**
+
+```powershell
+# Open PowerShell
+ssh-keygen -t ed25519 -C "k3s-lab"
+
+# Press Enter to accept default location (C:\Users\YourUser\.ssh\id_ed25519)
+# Enter passphrase (optional)
+
+# View your public key:
+Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub
+
+# Copy this key to use in terraform.tfvars
+```
+
+**5. Configure SSH for WSL:**
+
+```bash
+# Inside WSL, create .ssh directory
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Copy SSH key from Windows to WSL
+cp /mnt/c/Users/YOUR_WINDOWS_USER/.ssh/id_ed25519* ~/.ssh/
+chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
+```
+
+### On Proxmox:
+
+- **Proxmox VE** 7.x or higher installed and running
+- **Template VM** with Ubuntu 24.04 + Cloud-init (ID 9000)
+- API access with user **root@pam**
 
 ---
 
-## 🚀 Instalación
+## 🚀 Installation
 
-### Paso 1: Crear Template Cloud-Init en Proxmox
+### Step 1: Create Cloud-Init Template on Proxmox
 
-Ejecuta esto en el **host Proxmox** (SSH):
+Run this on the **Proxmox host** (SSH):
 
 ```bash
-# Descargar imagen Ubuntu Cloud
+# Download Ubuntu Cloud image
 cd /tmp
 wget https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 
-# Crear VM template
+# Create VM template
 qm create 9000 --name ubuntu-template --memory 2048 --net0 virtio,bridge=vmbr0
 
-# Importar disco
+# Import disk
 qm importdisk 9000 noble-server-cloudimg-amd64.img local-lvm
 
-# Configurar disco y cloud-init
+# Configure disk and cloud-init
 qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
 qm set 9000 --ide2 local-lvm:cloudinit
 qm set 9000 --boot c --bootdisk scsi0
 qm set 9000 --serial0 socket --vga serial0
 qm set 9000 --agent enabled=1
 
-# Convertir a template
+# Convert to template
 qm template 9000
 
-# Verificar
+# Verify
 qm list
 ```
 
@@ -157,6 +231,7 @@ cd terraform/
 
 # Edit terraform.tfvars with your data
 nano terraform.tfvars
+# On Windows: notepad terraform.tfvars
 ```
 
 **Edit `terraform.tfvars` and replace placeholders:**
@@ -173,21 +248,21 @@ Each variable has comments explaining how to obtain the value.
 ### Step 4: Deploy VMs with Terraform
 
 ```bash
-# Inicializar Terraform
+# Initialize Terraform
 terraform init
 
-# Verificar plan
+# Verify plan
 terraform plan
 
-# Aplicar (crear VMs)
+# Apply (create VMs)
 terraform apply
 
-# Confirmar con "yes"
+# Confirm with "yes"
 ```
 
-**Tiempo estimado:** 3-5 minutos
+**Estimated time:** 3-5 minutes
 
-**Output esperado:**
+**Expected output:**
 
 ```
 k3s_master_ip = "192.168.10.100"
@@ -195,24 +270,39 @@ k3s_worker_1_ip = "192.168.10.101"
 k3s_worker_2_ip = "192.168.10.102"
 ```
 
-### Paso 5: Instalar K3s con Ansible
+### Step 5: Install K3s with Ansible
+
+**On Linux/Mac:**
 
 ```bash
 cd ../ansible/
 
-# Verificar conectividad SSH
+# Verify SSH connectivity
 ansible all -i inventory.yml -m ping
 
-# Desplegar K3s
+# Deploy K3s
 ansible-playbook -i inventory.yml playbook-k3s.yml
 ```
 
-**Tiempo estimado:** 5-10 minutos
+**On Windows (using WSL):**
 
-**Output esperado:**
+```bash
+# Open WSL terminal
+cd /mnt/d/Workspace/proxmox-k3s-lab/ansible
+
+# Verify SSH connectivity
+ansible all -i inventory.yml -m ping
+
+# Deploy K3s
+ansible-playbook -i inventory.yml playbook-k3s.yml
+```
+
+**Estimated time:** 5-10 minutes
+
+**Expected output:**
 
 ```
-TASK [Mostrar estado del cluster] 
+TASK [Show cluster status] 
 ok: [master] => {
     "msg": [
         "NAME              STATUS   ROLES                  AGE   VERSION",
@@ -223,62 +313,135 @@ ok: [master] => {
 }
 ```
 
-### Paso 6: Configurar kubectl en tu máquina
+### Step 6: Configure kubectl on your machine
+
+**On Linux/Mac:**
 
 ```bash
-# Copiar kubeconfig desde el master
+# Copy kubeconfig from master
 scp ubuntu@192.168.10.100:/etc/rancher/k3s/k3s.yaml ~/.kube/config
 
-# Cambiar IP del servidor (localhost → IP del master)
+# Change server IP (localhost → master IP)
 sed -i 's/127.0.0.1/192.168.10.100/g' ~/.kube/config
 
-# Verificar acceso
+# Verify access
+kubectl get nodes
+kubectl cluster-info
+```
+
+**On Windows:**
+
+```powershell
+# Copy kubeconfig from master
+scp ubuntu@192.168.10.100:/etc/rancher/k3s/k3s.yaml $env:USERPROFILE\.kube\config
+
+# Edit config file and change server IP
+# Open: C:\Users\YourUser\.kube\config
+# Replace: https://127.0.0.1:6443
+# With: https://192.168.10.100:6443
+
+# Verify access
 kubectl get nodes
 kubectl cluster-info
 ```
 
 ---
 
-## 🎮 Uso del Cluster
+## 🖥️ Install Lens (Optional - Recommended)
 
-### Verificar estado del cluster
+[Lens](https://k8slens.dev/) is a powerful IDE for Kubernetes that provides a graphical interface to manage your cluster.
+
+### Install Lens
+
+**On Windows/Mac/Linux:**
+
+1. Download Lens from: https://k8slens.dev/
+2. Install the application
+3. Launch Lens
+
+### Add your K3s cluster to Lens
+
+**Option 1: Automatic detection**
+
+1. Open Lens
+2. Click on **"+"** (Add Cluster) in the top left
+3. Lens will automatically detect clusters from `~/.kube/config`
+4. Select your K3s cluster and click **"Add Cluster"**
+
+**Option 2: Manual configuration**
+
+1. Open Lens
+2. Click **"+" → "Add from kubeconfig"**
+3. Paste the content of your kubeconfig:
 
 ```bash
-# Ver nodos
+# Linux/Mac
+cat ~/.kube/config
+
+# Windows PowerShell
+Get-Content $env:USERPROFILE\.kube\config
+```
+
+4. Click **"Add Cluster"**
+
+### Using Lens
+
+Once connected, you can:
+- **View all resources** in a graphical interface
+- **Access pod logs** with syntax highlighting
+- **Execute commands** in pods with integrated terminal
+- **Monitor resources** (CPU, Memory) in real-time
+- **Edit resources** with a built-in YAML editor
+- **Port-forward** services with one click
+- **Install Helm charts** from a catalog
+
+**Recommended Lens extensions:**
+- Resource Metrics (view CPU/Memory usage)
+- Pod Security
+- Helm
+
+---
+
+## 🎮 Cluster Usage
+
+### Verify cluster status
+
+```bash
+# View nodes
 kubectl get nodes -o wide
 
-# Ver todos los recursos
+# View all resources
 kubectl get all -A
 
-# Ver pods del sistema
+# View system pods
 kubectl get pods -n kube-system
 ```
 
-### Desplegar una aplicación de prueba
+### Deploy a test application
 
 ```bash
-# Crear deployment de nginx
+# Create nginx deployment
 kubectl create deployment nginx --image=nginx --replicas=3
 
-# Exponer como servicio
+# Expose as service
 kubectl expose deployment nginx --port=80 --type=NodePort
 
-# Ver servicio creado
+# View created service
 kubectl get svc nginx
 
-# Acceder (sustituye NODEPORT por el puerto asignado)
+# Access (replace NODEPORT with assigned port)
 curl http://192.168.10.100:NODEPORT
 ```
 
-### Usar los ejemplos incluidos
+### Use included examples
 
 ```bash
-cd k3s/examples/
+cd k3s/
 
-# Deployment simple
+# Simple deployment
 kubectl apply -f 01-deployment-simple.yaml
 
-# ConfigMap y Secret
+# ConfigMap and Secret
 kubectl apply -f 02-configmap-secret.yaml
 
 # Health checks
@@ -287,17 +450,17 @@ kubectl apply -f 03-health-checks.yaml
 # Persistent Volume
 kubectl apply -f 04-persistent-volume.yaml
 
-# Ver README de ejemplos
+# View examples README
 cat README.md
 ```
 
 ---
 
-## 🔧 Gestión y Mantenimiento
+## 🔧 Management and Maintenance
 
-### Añadir un nuevo worker
+### Add a new worker
 
-Edita `terraform/k3s-worker-3.tf`:
+Edit `terraform/k3s-worker-3.tf`:
 
 ```hcl
 resource "proxmox_virtual_environment_vm" "k3s-worker-3" {
@@ -349,51 +512,51 @@ resource "proxmox_virtual_environment_vm" "k3s-worker-3" {
 }
 ```
 
-Luego:
+Then:
 
 ```bash
-# Crear VM
+# Create VM
 terraform apply
 
-# Añadir a inventory de Ansible
+# Add to Ansible inventory
 nano ../ansible/inventory.yml
 
-# Ejecutar playbook solo en el nuevo worker
+# Run playbook only on new worker
 ansible-playbook -i inventory.yml playbook-k3s.yml --limit worker-3
 ```
 
-### Actualizar K3s
+### Update K3s
 
 ```bash
-# En el master
+# On master
 ssh ubuntu@192.168.10.100
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.28.5+k3s1" sh -s - server
 
-# En cada worker
+# On each worker
 ssh ubuntu@192.168.10.101
 curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="v1.28.5+k3s1" K3S_URL=https://192.168.10.100:6443 K3S_TOKEN="..." sh -
 ```
 
-### Backup del cluster
+### Cluster backup
 
 ```bash
-# Backup del etcd (desde el master)
+# Backup etcd (from master)
 ssh ubuntu@192.168.10.100
 sudo k3s etcd-snapshot save --name backup-$(date +%Y%m%d-%H%M%S)
 
-# Los snapshots se guardan en: /var/lib/rancher/k3s/server/db/snapshots/
+# Snapshots are saved in: /var/lib/rancher/k3s/server/db/snapshots/
 ```
 
-### Monitorizar recursos
+### Monitor resources
 
 ```bash
-# Ver uso de recursos de los nodos
+# View node resource usage
 kubectl top nodes
 
-# Ver uso de recursos de los pods
+# View pod resource usage
 kubectl top pods -A
 
-# Describir un nodo
+# Describe a node
 kubectl describe node vm-k3s-worker-1
 ```
 
@@ -401,107 +564,107 @@ kubectl describe node vm-k3s-worker-1
 
 ## 🐛 Troubleshooting
 
-### VMs no se crean con Terraform
+### VMs not created with Terraform
 
 ```bash
-# Verificar conexión a Proxmox
+# Verify Proxmox connection
 curl -k https://192.168.10.111:8006/api2/json/version
 
-# Ver logs detallados de Terraform
+# View detailed Terraform logs
 TF_LOG=DEBUG terraform apply
 
-# Verificar que existe el template
+# Verify template exists
 ssh root@proxmox-host "qm list"
 ```
 
-### Ansible no puede conectar a las VMs
+### Ansible cannot connect to VMs
 
 ```bash
-# Verificar que las VMs tienen IP
+# Verify VMs have IP
 ssh root@proxmox-host "qm guest cmd 100 network-get-interfaces"
 
-# Probar SSH manual
+# Test SSH manually
 ssh ubuntu@192.168.10.100
 
-# Ver logs de cloud-init en la VM
+# View cloud-init logs in VM
 ssh ubuntu@192.168.10.100 "sudo cat /var/log/cloud-init.log"
 ```
 
-### Nodos no se unen al cluster
+### Nodes don't join cluster
 
 ```bash
-# En el master, ver logs de K3s
+# On master, view K3s logs
 ssh ubuntu@192.168.10.100
 sudo journalctl -u k3s -f
 
-# En el worker, ver logs
+# On worker, view logs
 ssh ubuntu@192.168.10.101
 sudo journalctl -u k3s-agent -f
 
-# Verificar token
+# Verify token
 ssh ubuntu@192.168.10.100
 sudo cat /var/lib/rancher/k3s/server/node-token
 
-# Verificar conectividad del worker al master
+# Verify worker to master connectivity
 ssh ubuntu@192.168.10.101
 curl -k https://192.168.10.100:6443
 ```
 
-### Pods en estado Pending
+### Pods in Pending state
 
 ```bash
-# Ver eventos del cluster
+# View cluster events
 kubectl get events -A --sort-by='.lastTimestamp'
 
-# Describir el pod problemático
+# Describe problematic pod
 kubectl describe pod POD_NAME -n NAMESPACE
 
-# Ver logs del pod
+# View pod logs
 kubectl logs POD_NAME -n NAMESPACE
 ```
 
-### Reiniciar K3s
+### Restart K3s
 
 ```bash
-# En el master
+# On master
 ssh ubuntu@192.168.10.100
 sudo systemctl restart k3s
 
-# En los workers
+# On workers
 ssh ubuntu@192.168.10.101
 sudo systemctl restart k3s-agent
 ```
 
 ---
 
-## 🗑️ Destruir el Cluster
+## 🗑️ Destroy Cluster
 
-### Opción 1: Destruir solo con Terraform
+### Option 1: Destroy with Terraform only
 
 ```bash
 cd terraform/
 terraform destroy
 ```
 
-Esto elimina las VMs pero deja el cluster K3s instalado (si vuelves a crear las VMs, necesitarás reinstalar K3s).
+This removes VMs but leaves K3s installed (if you recreate VMs, you'll need to reinstall K3s).
 
-### Opción 2: Destrucción completa
+### Option 2: Complete destruction
 
 ```bash
-# 1. Desinstalar K3s de todos los nodos
+# 1. Uninstall K3s from all nodes
 ansible all -i inventory.yml -b -m shell -a "/usr/local/bin/k3s-uninstall.sh" || true
 ansible k3s_workers -i inventory.yml -b -m shell -a "/usr/local/bin/k3s-agent-uninstall.sh" || true
 
-# 2. Destruir VMs con Terraform
+# 2. Destroy VMs with Terraform
 cd terraform/
 terraform destroy
 ```
 
 ---
 
-## 📚 Referencias
+## 📚 References
 
-### Documentación oficial:
+### Official Documentation:
 
 - [Proxmox VE Documentation](https://pve.proxmox.com/pve-docs/)
 - [Terraform Proxmox Provider](https://registry.terraform.io/providers/bpg/proxmox/latest/docs)
@@ -509,7 +672,7 @@ terraform destroy
 - [Ansible Documentation](https://docs.ansible.com/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 
-### Tutoriales y recursos:
+### Tutorials and Resources:
 
 - [K3s Quick Start](https://docs.k3s.io/quick-start)
 - [Terraform Best Practices](https://www.terraform-best-practices.com/)
@@ -517,28 +680,15 @@ terraform destroy
 
 ---
 
-## 🤝 Contribuciones
+## 🤝 Contributing
 
-¡Las contribuciones son bienvenidas! Si encuentras algún error o tienes mejoras:
+Contributions are welcome! If you find any bugs or have improvements:
 
-1. Fork este repositorio
-2. Crea una rama: `git checkout -b feature/mejora`
-3. Commit: `git commit -m 'Añade mejora X'`
-4. Push: `git push origin feature/mejora`
-5. Abre un Pull Request
-
----
-
-## 📺 YouTube Channel
-
-Follow the channel for more DevOps, Kubernetes and automation content:
-
-**[@angelmartinezdevops](https://youtube.com/@angelmartinezdevops)**
-
-Videos related to this repo:
-- Building a K3s cluster on Proxmox with Terraform
-- Automating Kubernetes with Ansible
-- Deploying applications on K3s
+1. Fork this repository
+2. Create a branch: `git checkout -b feature/improvement`
+3. Commit: `git commit -m 'Add improvement X'`
+4. Push: `git push origin feature/improvement`
+5. Open a Pull Request
 
 ---
 
