@@ -155,35 +155,20 @@ cd proxmox-k3s-lab
 ```bash
 cd terraform/
 
-# Copiar archivo de ejemplo
-cp terraform.tfvars.example terraform.tfvars
-
-# Editar con tus datos
+# Editar terraform.tfvars con tus datos
 nano terraform.tfvars
 ```
 
-**Contenido de `terraform.tfvars`:**
+**Edita `terraform.tfvars` y reemplaza los placeholders:**
 
-```hcl
-# Conexión a Proxmox
-proxmox_api_url  = "https://192.168.10.111:8006/api2/json"  # Tu IP de Proxmox
-proxmox_user     = "root@pam"
-proxmox_password = "tu-password-proxmox"
-proxmox_node     = "proxmox-lab"  # Nombre de tu nodo (pvesh get /nodes)
+El archivo ya existe con placeholders y comentarios detallados. Reemplaza:
+- `TU_IP_PROXMOX` con la IP de tu servidor Proxmox
+- `TU_PASSWORD_PROXMOX` con tu contraseña de Proxmox
+- `TU_NODO_PROXMOX` con el nombre de tu nodo Proxmox
+- `TU_GATEWAY` con tu gateway de red
+- `ssh-ed25519 AAAA_TU_CLAVE_PUBLICA...` con tu clave SSH pública completa
 
-# Template
-template_name = "ubuntu-cloud-template"
-
-# Red
-network_bridge  = "vmbr0"
-network_gateway = "192.168.10.1"  # Tu gateway
-
-# Clave SSH pública
-ssh_public_key = "ssh-ed25519 AAAA... tu-clave-publica"
-
-# Storage
-storage_pool = "local-lvm"
-```
+Cada variable tiene comentarios explicando cómo obtener el valor.
 
 ### Paso 4: Desplegar VMs con Terraform
 

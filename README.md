@@ -143,49 +143,34 @@ qm template 9000
 qm list
 ```
 
-### Paso 2: Clonar este repositorio
+### Step 2: Clone this repository
 
 ```bash
 git clone https://github.com/angelmartinezdevops/proxmox-k3s-lab.git
 cd proxmox-k3s-lab
 ```
 
-### Paso 3: Configurar Terraform
+### Step 3: Configure Terraform
 
 ```bash
 cd terraform/
 
-# Copiar archivo de ejemplo
-cp terraform.tfvars.example terraform.tfvars
-
-# Editar con tus datos
+# Edit terraform.tfvars with your data
 nano terraform.tfvars
 ```
 
-**Contenido de `terraform.tfvars`:**
+**Edit `terraform.tfvars` and replace placeholders:**
 
-```hcl
-# Conexión a Proxmox
-proxmox_api_url  = "https://192.168.10.111:8006/api2/json"  # Tu IP de Proxmox
-proxmox_user     = "root@pam"
-proxmox_password = "tu-password-proxmox"
-proxmox_node     = "proxmox-lab"  # Nombre de tu nodo (pvesh get /nodes)
+The file already exists with placeholders and detailed comments. Replace:
+- `TU_IP_PROXMOX` with your Proxmox server IP
+- `TU_PASSWORD_PROXMOX` with your Proxmox password
+- `TU_NODO_PROXMOX` with your Proxmox node name
+- `TU_GATEWAY` with your network gateway
+- `ssh-ed25519 AAAA_TU_CLAVE_PUBLICA...` with your full SSH public key
 
-# Template
-template_name = "ubuntu-cloud-template"
+Each variable has comments explaining how to obtain the value.
 
-# Red
-network_bridge  = "vmbr0"
-network_gateway = "192.168.10.1"  # Tu gateway
-
-# Clave SSH pública
-ssh_public_key = "ssh-ed25519 AAAA... tu-clave-publica"
-
-# Storage
-storage_pool = "local-lvm"
-```
-
-### Paso 4: Desplegar VMs con Terraform
+### Step 4: Deploy VMs with Terraform
 
 ```bash
 # Inicializar Terraform
